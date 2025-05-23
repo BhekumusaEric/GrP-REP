@@ -404,7 +404,16 @@ from volunteer import Volunteer
 from calendar_sync import get_calendar_events, create_event
 from config import load_config, save_config
 
-DATA_FILE = "data.json"list-bookings --email "alice@example.com" --type student
+DATA_FILE = "data.json"
+
+class CodeClinic:
+    def __init__(self):
+        """Initialize the Code Clinic system"""
+        self.volunteers = {}
+        self.bookings = []
+        self.volunteer_slots = []
+
+        # Load data from file
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
