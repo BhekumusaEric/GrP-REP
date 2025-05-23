@@ -264,7 +264,6 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.0.0/dist/mermaid.min.js"></script>
-    <script src="script.js"></script>
 </head>
 <body>
     <header>
@@ -405,16 +404,7 @@ from volunteer import Volunteer
 from calendar_sync import get_calendar_events, create_event
 from config import load_config, save_config
 
-DATA_FILE = "data.json"
-
-class CodeClinic:
-    def __init__(self):
-        """Initialize the Code Clinic system"""
-        self.volunteers = {}
-        self.bookings = []
-        self.volunteer_slots = []
-
-        # Load data from file
+DATA_FILE = "data.json"list-bookings --email "alice@example.com" --type student
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
@@ -1471,6 +1461,145 @@ if __name__ == '__main__':
         </div>
     </div>
 
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
 
+        // Function to render diagrams and handle loading states
+        function renderDiagrams() {
+            // Show all loading indicators
+            document.querySelectorAll('.loading').forEach(function(loader) {
+                loader.classList.add('active');
+            });
+
+            // Render diagrams
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+
+            // Hide loading indicators after rendering
+            setTimeout(function() {
+                document.querySelectorAll('.loading').forEach(function(loader) {
+                    loader.classList.remove('active');
+                });
+            }, 500);
+        }
+
+        // Tab functionality
+        function setupTabs() {
+            var tabs = document.querySelectorAll('.tab');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].onclick = function() {
+                    // Remove active class from all tabs
+                    for (var j = 0; j < tabs.length; j++) {
+                        tabs[j].classList.remove('active');
+                    }
+
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+
+                    // Hide all tab content
+                    var tabContents = document.querySelectorAll('.tab-content');
+                    for (var k = 0; k < tabContents.length; k++) {
+                        tabContents[k].classList.remove('active');
+                    }
+
+                    // Show the corresponding tab content
+                    var tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    // Re-render mermaid diagrams if needed
+                    if (tabId === 'system-diagram' || tabId === 'sequence-diagram' || tabId === 'entity-relationship') {
+                        renderDiagrams();
+                    }
+                };
+            }
+        }
+
+        // Folder toggle functionality
+        function setupFolders() {
+            var folders = document.querySelectorAll('.folder-name');
+            for (var i = 0; i < folders.length; i++) {
+                folders[i].onclick = function() {
+                    this.classList.toggle('open');
+
+                    // Toggle visibility of files in this folder
+                    var nextSibling = this.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = this.classList.contains('open') ? 'block' : 'none';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                };
+            }
+        }
+
+        // File click functionality
+        function setupFiles() {
+            var files = document.querySelectorAll('.file');
+            for (var i = 0; i < files.length; i++) {
+                files[i].onclick = function() {
+                    var fileId = this.getAttribute('data-file').replace('.', '-');
+                    var fileContent = document.getElementById(fileId);
+
+                    if (fileContent) {
+                        // Toggle the file content visibility
+                        fileContent.classList.toggle('active');
+                    }
+                };
+            }
+        }
+
+        // Initialize folder states
+        function initializeFolderStates() {
+            var folders = document.querySelectorAll('.folder-name');
+            for (var i = 0; i < folders.length; i++) {
+                var folder = folders[i];
+                if (folder.classList.contains('open')) {
+                    // Show files in open folders
+                    var nextSibling = folder.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = 'block';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                } else {
+                    // Hide files in closed folders
+                    var nextSibling = folder.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = 'none';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                }
+            }
+        }
+
+        // Initialize everything when the page loads
+        window.onload = function() {
+            setupTabs();
+            setupFolders();
+            setupFiles();
+            initializeFolderStates();
+            renderDiagrams();
+        };
+    </script>
 </body>
 </html>
