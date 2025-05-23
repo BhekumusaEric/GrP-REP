@@ -13,3 +13,5 @@ This repository contains a visual representation of the Code Clinic system archi
 ## Live Demo
 
 Visit the live visualization at: https://bhekumusaeric.github.io/GrP-REP/
+
+Last updated: May 23, 2025
