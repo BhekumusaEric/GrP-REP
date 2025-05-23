@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Clinic System Visualization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        .diagram {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .actors, .entities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .actor-card, .entity-card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            width: calc(33.333% - 20px);
+            min-width: 250px;
+        }
+        .actor-card h3, .entity-card h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .flow-steps {
+            counter-reset: step;
+        }
+        .flow-step {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            padding: 15px 15px 15px 50px;
+            position: relative;
+        }
+        .flow-step:before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            background-color: #3498db;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .mermaid {
+            text-align: center;
+            min-height: 200px;
+            position: relative;
+        }
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .loading.active {
+            display: block;
+        }
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            transition: all 0.3s ease;
+            border: 1px solid #ccc;
+            user-select: none;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            font-weight: 500;
+        }
+        .tab:after {
+            content: "";
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tab:hover {
+            background-color: #d0d0d0;
+            transform: translateY(-3px);
+            box-shadow: 0 -3px 7px rgba(0,0,0,0.15);
+        }
+        .tab:hover:before {
+            content: "Click to view";
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-bottom: none;
+            font-weight: bold;
+            transform: translateY(-3px);
+        }
+        .tab.active:after {
+            opacity: 1;
+        }
+        .folder-structure {
+            font-family: monospace;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        .folder {
+            margin-left: 20px;
+        }
+        .folder-name {
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+        .folder-name:hover {
+            background-color: #f0f0f0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .folder-name:before {
+            content: "📁 ";
+        }
+        .folder-name.open:before {
+            content: "📂 ";
+        }
+        .folder-name:after {
+            content: " (click to expand)";
+            font-size: 0.8em;
+            color: #777;
+            font-weight: normal;
+            opacity: 0.7;
+        }
+        .folder-name.open:after {
+            content: " (click to collapse)";
+        }
+        .file {
+            margin-left: 40px;
+            cursor: pointer;
+            color: #2980b9;
+            padding: 3px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .file:hover {
+            background-color: #e8f4fc;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        .file:before {
+            content: "📄 ";
+        }
+        .file:after {
+            content: " (click to view)";
+            font-size: 0.8em;
+            color: #777;
+            opacity: 0.7;
+        }
+        .file-content {
+            display: none;
+            background-color: #f9f9f9;
+            border-left: 3px solid #3498db;
+            padding: 15px;
+            margin: 10px 0 10px 40px;
+            border-radius: 0 5px 5px 0;
+            overflow-x: auto;
+        }
+        .file-content.active {
+            display: block;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .code-explanation {
+            background-color: #f0f7fb;
+            border-left: 3px solid #3498db;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.0.0/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Code Clinic System Visualization</h1>
+            <p>A visual representation of the system architecture, actors, flows, and entities</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="section">
+            <h2>System Overview</h2>
+            <p>The Code Clinic system facilitates peer-to-peer learning by allowing students to volunteer their time to help other students with coding problems. The system integrates with Google Calendar to manage bookings and availability.</p>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="system-diagram">System Diagram</div>
+                <div class="tab" data-tab="sequence-diagram">Sequence Diagram</div>
+                <div class="tab" data-tab="entity-relationship">Entity Relationship</div>
+                <div class="tab" data-tab="project-structure">Project Structure</div>
+            </div>
+
+            <div class="tab-content active" id="system-diagram">
+                <div class="diagram">
+                    <div class="loading active">
+                        <div class="loading-spinner"></div>
+                        <p>Loading diagram...</p>
+                    </div>
+                    <div class="mermaid">
+                        graph TD
+                            A[Student] -->|Books session| B[Code Clinic System]
+                            C[Volunteer] -->|Offers time slots| B
+                            B -->|Syncs events| D[Google Calendar]
+                            B -->|Stores data| E[Local Storage]
+                            B -->|Sends notifications| F[Email]
+
+                            subgraph Code Clinic Components
+                                G[Clinic Module] -->|Manages| H[Bookings]
+                                G -->|Coordinates with| I[Volunteer Module]
+                                I -->|Manages| J[Volunteer Availability]
+                                K[Calendar Sync Module] -->|Integrates with| D
+                                G -->|Uses| K
+                                I -->|Uses| K
+                                L[Config Module] -->|Provides settings for| G
+                                L -->|Provides settings for| I
+                                L -->|Provides settings for| K
+                            end
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="sequence-diagram">
+                <div class="diagram">
+                    <div class="loading active">
+                        <div class="loading-spinner"></div>
+                        <p>Loading diagram...</p>
+                    </div>
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant S as Student
+                            participant C as Code Clinic System
+                            participant V as Volunteer
+                            participant G as Google Calendar
+
+                            V->>C: Register as volunteer
+                            V->>C: Set available time slots
+                            C->>G: Create calendar events for slots
+                            S->>C: View available slots
+                            S->>C: Book a session
+                            C->>G: Update calendar event
+                            C->>V: Notify of booking
+                            C->>S: Confirm booking
+                            S->>C: Cancel booking (optional)
+                            C->>G: Update calendar event
+                            C->>V: Notify of cancellation
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="entity-relationship">
+                <div class="diagram">
+                    <div class="loading active">
+                        <div class="loading-spinner"></div>
+                        <p>Loading diagram...</p>
+                    </div>
+                    <div class="mermaid">
+                        erDiagram
+                            STUDENT {
+                                string name
+                                string email
+                                string student_no
+                            }
+                            VOLUNTEER {
+                                string name
+                                string email
+                                string student_no
+                                array availability
+                            }
+                            BOOKING {
+                                string date
+                                string time
+                                int duration
+                                string student_email
+                                string description
+                                string event_id
+                            }
+                            VOLUNTEER_SLOT {
+                                string date
+                                string time
+                                int duration
+                                string volunteer_email
+                                string event_id
+                                boolean booked
+                            }
+
+                            VOLUNTEER ||--o{ VOLUNTEER_SLOT : offers
+                            STUDENT ||--o{ BOOKING : makes
+                            VOLUNTEER_SLOT ||--o| BOOKING : fulfills
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="project-structure">
+                <h3>Project Files and Structure</h3>
+                <p>This section provides a detailed overview of the project's file structure, including code samples and explanations for each file.</p>
+
+                <div class="folder-structure">
+                    <div class="folder">
+                        <div class="folder-name open">code_clinic_project</div>
+                        <div class="file" data-file="clinic.py">clinic.py - Main System Module</div>
+                        <div class="file-content" id="clinic-py">
+                            <pre><code>
+# clinic.py - Main Code Clinic System Module
+
+import datetime
+import json
+import os
+from volunteer import Volunteer
+from calendar_sync import get_calendar_events, create_event
+from config import load_config, save_config
+
+DATA_FILE = "data.json"
+
+class CodeClinic:
+    def __init__(self):
+        """Initialize the Code Clinic system"""
+        self.volunteers = {}
+        self.bookings = []
+        self.volunteer_slots = []
+
+        # Load data from file
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r') as f:
+                data = json.load(f)
+                self.bookings = data.get('bookings', [])
+                self.volunteer_slots = data.get('volunteer_slots', [])
+
+    def save_data(self):
+        """Save data to the data file"""
+        data = {
+            'bookings': self.bookings,
+            'volunteer_slots': self.volunteer_slots
+        }
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    def register_volunteer(self, name, age, gender, student_no, email):
+        """Register a new volunteer"""
+        volunteer = Volunteer(name, age, gender, student_no, email)
+        self.volunteers[email] = volunteer
+        return volunteer
+
+    def add_volunteer_slot(self, volunteer_email, date, time, duration=30):
+        """Add a volunteer time slot"""
+        # Validate volunteer exists
+        if volunteer_email not in self.volunteers:
+            return False
+
+        # Create slot
+        slot = {
+            'date': date,
+            'time': time,
+            'duration': duration,
+            'volunteer_email': volunteer_email,
+            'booked': False
+        }
+
+        # Add to calendar
+        event_id = create_event(
+            'primary',
+            f"Code Clinic Volunteer Slot",
+            f"{date}T{time}:00",
+            f"{date}T{time}:00+{duration}M",
+            "Available for Code Clinic"
+        )
+
+        if event_id:
+            slot['event_id'] = event_id
+            self.volunteer_slots.append(slot)
+            self.save_data()
+            return True
+        return False
+
+    def book_slot(self, student_email, slot_index, description):
+        """Book a volunteer slot"""
+        if slot_index < 0 or slot_index >= len(self.volunteer_slots):
+            return False
+
+        slot = self.volunteer_slots[slot_index]
+        if slot['booked']:
+            return False
+
+        # Create booking
+        booking = {
+            'date': slot['date'],
+            'time': slot['time'],
+            'duration': slot['duration'],
+            'student_email': student_email,
+            'description': description,
+            'event_id': slot['event_id']
+        }
+
+        # Update calendar event
+        # Implementation here
+
+        # Update slot and save
+        slot['booked'] = True
+        self.bookings.append(booking)
+        self.save_data()
+        return True
+
+    def get_available_slots(self):
+        """Get all available volunteer slots"""
+        return [slot for slot in self.volunteer_slots if not slot['booked']]
+
+    def get_bookings_for_student(self, student_email):
+        """Get all bookings for a student"""
+        return [booking for booking in self.bookings if booking['student_email'] == student_email]
+
+    def get_bookings_for_volunteer(self, volunteer_email):
+        """Get all bookings for a volunteer"""
+        volunteer_slots = [slot for slot in self.volunteer_slots if slot['volunteer_email'] == volunteer_email]
+        booked_slots = [slot for slot in volunteer_slots if slot['booked']]
+
+        bookings = []
+        for slot in booked_slots:
+            for booking in self.bookings:
+                if booking['date'] == slot['date'] and booking['time'] == slot['time']:
+                    bookings.append(booking)
+
+        return bookings
+
+def main():
+    """Main function to run the Code Clinic system"""
+    clinic = CodeClinic()
+    # Command-line interface implementation here
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>clinic.py</code> file is the main module of the Code Clinic system. It provides the core functionality for managing volunteers, bookings, and time slots.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>CodeClinic Class:</strong> The main class that encapsulates all system functionality</li>
+                                    <li><strong>Data Persistence:</strong> Loading and saving data to a JSON file</li>
+                                    <li><strong>Volunteer Management:</strong> Registering volunteers and managing their availability</li>
+                                    <li><strong>Booking System:</strong> Creating and managing bookings between students and volunteers</li>
+                                    <li><strong>Calendar Integration:</strong> Using the calendar_sync module to integrate with Google Calendar</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="volunteer.py">volunteer.py - Volunteer Management</div>
+                        <div class="file-content" id="volunteer-py">
+                            <pre><code>
+# volunteer.py - Volunteer Management Module
+
+class Volunteer:
+    def __init__(self, name, age, gender, student_no, email):
+        """Initialize a volunteer with personal details"""
+        self.name = name
+        self.age = age
+        self.gender = gender
+        self.student_no = student_no
+        self.email = email
+        self.availability = []
+
+    def choose_dates_whenavailable(self, dates):
+        """Add available dates for volunteering"""
+        # Validate dates format
+        valid_dates = []
+        for date in dates:
+            # Add validation logic here
+            valid_dates.append(date)
+
+        # Update availability
+        self.availability.extend(valid_dates)
+        return True
+
+    def finalize_booking(self, date_time):
+        """Confirm a volunteer slot"""
+        # Check if date_time is in availability
+        if date_time in self.availability:
+            # Implementation for confirming the booking
+            return True
+        return False
+
+    def cancel_booking(self, date_time):
+        """Cancel a volunteer slot"""
+        # Implementation for canceling a booking
+        return True
+
+    def get_availability(self):
+        """Get all available time slots for this volunteer"""
+        return self.availability
+
+    def __str__(self):
+        """String representation of the volunteer"""
+        return f"{self.name} ({self.email}) - Student #{self.student_no}"
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>volunteer.py</code> file contains the Volunteer class, which represents a student who offers their time to help others with coding problems.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Object-Oriented Programming:</strong> Using a class to encapsulate volunteer data and behavior</li>
+                                    <li><strong>Availability Management:</strong> Methods for setting and managing volunteer availability</li>
+                                    <li><strong>Booking Workflow:</strong> Methods for finalizing and canceling bookings</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="calendar_sync.py">calendar_sync.py - Google Calendar Integration</div>
+                        <div class="file-content" id="calendar-sync-py">
+                            <pre><code>
+# calendar_sync.py - Google Calendar Integration Module
+
+import datetime
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+
+def get_credentials():
+    """Get credentials for Google Calendar API"""
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first time.
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "secrets/credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+    return creds
+
+def get_calendar_events(days=7, calendar_id="primary"):
+    """Get calendar events for the specified number of days"""
+    creds = get_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    end_date = now + datetime.timedelta(days=days)
+
+    events_result = service.events().list(
+        calendarId=calendar_id,
+        timeMin=now.isoformat(),
+        timeMax=end_date.isoformat(),
+        singleEvents=True,
+        orderBy="startTime"
+    ).execute()
+
+    return events_result.get("items", [])
+
+def create_event(calendar_id, summary, start_time, end_time, description=""):
+    """Create a new event in the specified calendar"""
+    creds = get_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    # Parse start and end times
+    start_datetime = datetime.datetime.fromisoformat(start_time)
+    end_datetime = datetime.datetime.fromisoformat(end_time)
+
+    event = {
+        'summary': summary,
+        'description': description,
+        'start': {
+            'dateTime': start_datetime.isoformat(),
+            'timeZone': 'Africa/Johannesburg',
+        },
+        'end': {
+            'dateTime': end_datetime.isoformat(),
+            'timeZone': 'Africa/Johannesburg',
+        },
+        'reminders': {
+            'useDefault': True,
+        },
+    }
+
+    try:
+        event = service.events().insert(calendarId=calendar_id, body=event).execute()
+        return event.get('id')
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        return None
+
+def update_event(calendar_id, event_id, summary=None, description=None):
+    """Update an existing calendar event"""
+    creds = get_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    # Get the event
+    event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+
+    # Update fields if provided
+    if summary:
+        event['summary'] = summary
+    if description:
+        event['description'] = description
+
+    try:
+        updated_event = service.events().update(
+            calendarId=calendar_id,
+            eventId=event_id,
+            body=event
+        ).execute()
+        return updated_event.get('id')
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        return None
+
+def delete_event(calendar_id, event_id):
+    """Delete a calendar event"""
+    creds = get_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    try:
+        service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+        return True
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        return False
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>calendar_sync.py</code> file handles integration with Google Calendar API, allowing the system to create, update, and delete events in users' calendars.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>API Integration:</strong> Using Google Calendar API to manage events</li>
+                                    <li><strong>Authentication:</strong> Handling OAuth2 authentication flow for secure API access</li>
+                                    <li><strong>Event Management:</strong> Creating, updating, and deleting calendar events</li>
+                                    <li><strong>Error Handling:</strong> Properly handling API errors and exceptions</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="config.py">config.py - Configuration Management</div>
+                        <div class="file-content" id="config-py">
+                            <pre><code>
+# config.py - Configuration Management Module
+
+import os
+import json
+
+CONFIG_FILE = os.path.expanduser("~/.code_clinic_config")
+
+def load_config():
+    """Load configuration from the config file"""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_config(config_data):
+    """Save configuration to the config file"""
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config_data, f, indent=2)
+
+def get_config_value(key, default=None):
+    """Get a specific configuration value"""
+    config = load_config()
+    return config.get(key, default)
+
+def set_config_value(key, value):
+    """Set a specific configuration value"""
+    config = load_config()
+    config[key] = value
+    save_config(config)
+    return True
+
+def remove_config_value(key):
+    """Remove a specific configuration value"""
+    config = load_config()
+    if key in config:
+        del config[key]
+        save_config(config)
+        return True
+    return False
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>config.py</code> file provides functionality for managing system configuration settings, storing them in a JSON file in the user's home directory.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Configuration Management:</strong> Loading and saving configuration settings</li>
+                                    <li><strong>User Settings:</strong> Storing user-specific settings in the home directory</li>
+                                    <li><strong>JSON Serialization:</strong> Using JSON for data storage and retrieval</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="student.py">student.py - Student Management</div>
+                        <div class="file-content" id="student-py">
+                            <pre><code>
+# student.py - Student Management Module
+
+class Student:
+    def __init__(self, name, student_no, email):
+        """Initialize a student with personal details"""
+        self.name = name
+        self.student_no = student_no
+        self.email = email
+        self.bookings = []
+
+    def book_session(self, date, time, volunteer_email, description):
+        """Book a session with a volunteer"""
+        booking = {
+            'date': date,
+            'time': time,
+            'volunteer_email': volunteer_email,
+            'description': description,
+            'status': 'pending'
+        }
+        self.bookings.append(booking)
+        return booking
+
+    def cancel_booking(self, booking_index):
+        """Cancel a booking"""
+        if booking_index < 0 or booking_index >= len(self.bookings):
+            return False
+
+        booking = self.bookings[booking_index]
+        booking['status'] = 'cancelled'
+        return True
+
+    def get_bookings(self):
+        """Get all bookings for this student"""
+        return self.bookings
+
+    def get_active_bookings(self):
+        """Get all active (non-cancelled) bookings for this student"""
+        return [b for b in self.bookings if b['status'] != 'cancelled']
+
+    def __str__(self):
+        """String representation of the student"""
+        return f"{self.name} ({self.email}) - Student #{self.student_no}"
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>student.py</code> file contains the Student class, which represents a student who can book sessions with volunteers.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Object-Oriented Programming:</strong> Using a class to encapsulate student data and behavior</li>
+                                    <li><strong>Booking Management:</strong> Methods for creating and canceling bookings</li>
+                                    <li><strong>Data Filtering:</strong> Methods to retrieve different subsets of bookings</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="data_store.py">data_store.py - Data Storage</div>
+                        <div class="file-content" id="data-store-py">
+                            <pre><code>
+# data_store.py - Data Storage Module
+
+import json
+import os
+import datetime
+
+DATA_DIR = "data"
+STUDENTS_FILE = os.path.join(DATA_DIR, "students.json")
+VOLUNTEERS_FILE = os.path.join(DATA_DIR, "volunteers.json")
+BOOKINGS_FILE = os.path.join(DATA_DIR, "bookings.json")
+SLOTS_FILE = os.path.join(DATA_DIR, "slots.json")
+
+def ensure_data_dir():
+    """Ensure the data directory exists"""
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+
+def load_json_file(file_path):
+    """Load data from a JSON file"""
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_json_file(file_path, data):
+    """Save data to a JSON file"""
+    ensure_data_dir()
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=2)
+
+# Student data functions
+def get_students():
+    """Get all students"""
+    return load_json_file(STUDENTS_FILE)
+
+def save_students(students):
+    """Save all students"""
+    save_json_file(STUDENTS_FILE, students)
+
+def add_student(student_data):
+    """Add a new student"""
+    students = get_students()
+    students.append(student_data)
+    save_students(students)
+    return True
+
+# Volunteer data functions
+def get_volunteers():
+    """Get all volunteers"""
+    return load_json_file(VOLUNTEERS_FILE)
+
+def save_volunteers(volunteers):
+    """Save all volunteers"""
+    save_json_file(VOLUNTEERS_FILE, volunteers)
+
+def add_volunteer(volunteer_data):
+    """Add a new volunteer"""
+    volunteers = get_volunteers()
+    volunteers.append(volunteer_data)
+    save_volunteers(volunteers)
+    return True
+
+# Booking data functions
+def get_bookings():
+    """Get all bookings"""
+    return load_json_file(BOOKINGS_FILE)
+
+def save_bookings(bookings):
+    """Save all bookings"""
+    save_json_file(BOOKINGS_FILE, bookings)
+
+def add_booking(booking_data):
+    """Add a new booking"""
+    bookings = get_bookings()
+    booking_data['created_at'] = datetime.datetime.now().isoformat()
+    bookings.append(booking_data)
+    save_bookings(bookings)
+    return True
+
+# Slot data functions
+def get_slots():
+    """Get all volunteer slots"""
+    return load_json_file(SLOTS_FILE)
+
+def save_slots(slots):
+    """Save all volunteer slots"""
+    save_json_file(SLOTS_FILE, slots)
+
+def add_slot(slot_data):
+    """Add a new volunteer slot"""
+    slots = get_slots()
+    slot_data['created_at'] = datetime.datetime.now().isoformat()
+    slots.append(slot_data)
+    save_slots(slots)
+    return True
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>data_store.py</code> file provides functions for storing and retrieving data from JSON files, serving as a simple database for the application.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Data Persistence:</strong> Storing application data in JSON files</li>
+                                    <li><strong>File I/O:</strong> Reading from and writing to files</li>
+                                    <li><strong>Data Organization:</strong> Separating different types of data into different files</li>
+                                    <li><strong>CRUD Operations:</strong> Create, Read, Update, and Delete operations for data</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="utils.py">utils.py - Utility Functions</div>
+                        <div class="file-content" id="utils-py">
+                            <pre><code>
+# utils.py - Utility Functions Module
+
+import datetime
+import re
+
+def validate_email(email):
+    """Validate an email address format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+def validate_date(date_str):
+    """Validate a date string in YYYY-MM-DD format"""
+    try:
+        datetime.datetime.strptime(date_str, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
+
+def validate_time(time_str):
+    """Validate a time string in HH:MM format"""
+    try:
+        datetime.datetime.strptime(time_str, '%H:%M')
+        return True
+    except ValueError:
+        return False
+
+def format_date_time(date_str, time_str):
+    """Format date and time strings into a datetime object"""
+    return datetime.datetime.strptime(f"{date_str} {time_str}", '%Y-%m-%d %H:%M')
+
+def get_current_week_dates():
+    """Get a list of dates for the current week"""
+    today = datetime.date.today()
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+    return [start_of_week + datetime.timedelta(days=i) for i in range(7)]
+
+def format_slot_display(slot):
+    """Format a slot for display"""
+    date = slot['date']
+    time = slot['time']
+    duration = slot['duration']
+
+    # Calculate end time
+    start_time = datetime.datetime.strptime(time, '%H:%M')
+    end_time = start_time + datetime.timedelta(minutes=duration)
+
+    return f"{date} {time}-{end_time.strftime('%H:%M')}"
+
+def is_slot_in_future(slot):
+    """Check if a slot is in the future"""
+    now = datetime.datetime.now()
+    slot_datetime = format_date_time(slot['date'], slot['time'])
+    return slot_datetime > now
+
+def get_time_until_slot(slot):
+    """Get the time until a slot starts"""
+    now = datetime.datetime.now()
+    slot_datetime = format_date_time(slot['date'], slot['time'])
+
+    if slot_datetime < now:
+        return "Past"
+
+    diff = slot_datetime - now
+    days = diff.days
+    hours, remainder = divmod(diff.seconds, 3600)
+    minutes, _ = divmod(remainder, 60)
+
+    if days > 0:
+        return f"{days} days, {hours} hours"
+    elif hours > 0:
+        return f"{hours} hours, {minutes} minutes"
+    else:
+        return f"{minutes} minutes"
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>utils.py</code> file contains utility functions that are used throughout the application for common tasks like validation and formatting.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Input Validation:</strong> Functions to validate user input like email addresses, dates, and times</li>
+                                    <li><strong>Date/Time Handling:</strong> Functions for working with dates and times</li>
+                                    <li><strong>Formatting:</strong> Functions to format data for display</li>
+                                    <li><strong>Helper Functions:</strong> Reusable utility functions to avoid code duplication</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="file" data-file="cli.py">cli.py - Command Line Interface</div>
+                        <div class="file-content" id="cli-py">
+                            <pre><code>
+# cli.py - Command Line Interface Module
+
+import argparse
+import sys
+from clinic import CodeClinic
+from utils import validate_email, validate_date, validate_time
+
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Code Clinic CLI')
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+
+    # Register volunteer command
+    register_parser = subparsers.add_parser('register', help='Register as a volunteer')
+    register_parser.add_argument('--name', required=True, help='Volunteer name')
+    register_parser.add_argument('--age', required=True, type=int, help='Volunteer age')
+    register_parser.add_argument('--gender', required=True, help='Volunteer gender')
+    register_parser.add_argument('--student-no', required=True, help='Student number')
+    register_parser.add_argument('--email', required=True, help='Email address')
+
+    # Add slot command
+    slot_parser = subparsers.add_parser('add-slot', help='Add a volunteer time slot')
+    slot_parser.add_argument('--email', required=True, help='Volunteer email')
+    slot_parser.add_argument('--date', required=True, help='Date (YYYY-MM-DD)')
+    slot_parser.add_argument('--time', required=True, help='Time (HH:MM)')
+    slot_parser.add_argument('--duration', type=int, default=30, help='Duration in minutes')
+
+    # Book slot command
+    book_parser = subparsers.add_parser('book', help='Book a volunteer slot')
+    book_parser.add_argument('--email', required=True, help='Student email')
+    book_parser.add_argument('--slot-index', required=True, type=int, help='Slot index')
+    book_parser.add_argument('--description', required=True, help='Description of the problem')
+
+    # List slots command
+    list_parser = subparsers.add_parser('list-slots', help='List available slots')
+
+    # List bookings command
+    bookings_parser = subparsers.add_parser('list-bookings', help='List bookings')
+    bookings_parser.add_argument('--email', required=True, help='Email address')
+    bookings_parser.add_argument('--type', choices=['student', 'volunteer'], default='student', help='Type of user')
+
+    return parser.parse_args()
+
+def main():
+    """Main CLI function"""
+    args = parse_args()
+    clinic = CodeClinic()
+
+    if args.command == 'register':
+        # Validate email
+        if not validate_email(args.email):
+            print("Error: Invalid email address")
+            return 1
+
+        volunteer = clinic.register_volunteer(
+            args.name, args.age, args.gender, args.student_no, args.email
+        )
+        print(f"Volunteer registered: {volunteer}")
+
+    elif args.command == 'add-slot':
+        # Validate inputs
+        if not validate_email(args.email):
+            print("Error: Invalid email address")
+            return 1
+        if not validate_date(args.date):
+            print("Error: Invalid date format. Use YYYY-MM-DD")
+            return 1
+        if not validate_time(args.time):
+            print("Error: Invalid time format. Use HH:MM")
+            return 1
+
+        success = clinic.add_volunteer_slot(
+            args.email, args.date, args.time, args.duration
+        )
+        if success:
+            print(f"Slot added: {args.date} {args.time} ({args.duration} minutes)")
+        else:
+            print("Error: Failed to add slot")
+            return 1
+
+    elif args.command == 'book':
+        # Validate email
+        if not validate_email(args.email):
+            print("Error: Invalid email address")
+            return 1
+
+        success = clinic.book_slot(
+            args.email, args.slot_index, args.description
+        )
+        if success:
+            print(f"Slot booked successfully")
+        else:
+            print("Error: Failed to book slot")
+            return 1
+
+    elif args.command == 'list-slots':
+        slots = clinic.get_available_slots()
+        if not slots:
+            print("No available slots found")
+        else:
+            print("Available slots:")
+            for i, slot in enumerate(slots):
+                print(f"{i}: {slot['date']} {slot['time']} - {slot['duration']} minutes")
+
+    elif args.command == 'list-bookings':
+        if args.type == 'student':
+            bookings = clinic.get_bookings_for_student(args.email)
+        else:
+            bookings = clinic.get_bookings_for_volunteer(args.email)
+
+        if not bookings:
+            print("No bookings found")
+        else:
+            print("Bookings:")
+            for i, booking in enumerate(bookings):
+                print(f"{i}: {booking['date']} {booking['time']} - {booking['description']}")
+
+    else:
+        print("Error: Unknown command")
+        return 1
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+</code></pre>
+                            <div class="code-explanation">
+                                <h4>Explanation:</h4>
+                                <p>The <code>cli.py</code> file provides a command-line interface for interacting with the Code Clinic system, allowing users to register, add slots, book sessions, and view information.</p>
+                                <p><strong>Key Concepts:</strong></p>
+                                <ul>
+                                    <li><strong>Command-Line Interface:</strong> Using argparse to create a user-friendly CLI</li>
+                                    <li><strong>Subcommands:</strong> Implementing different commands for different actions</li>
+                                    <li><strong>Input Validation:</strong> Validating user input before processing</li>
+                                    <li><strong>Error Handling:</strong> Providing clear error messages and return codes</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="folder">
+                            <div class="folder-name">tests</div>
+                            <div class="file" data-file="test_clinic.py">test_clinic.py - Unit Tests for Clinic Module</div>
+                            <div class="file-content" id="test-clinic-py">
+                                <pre><code>
+# test_clinic.py - Unit Tests for Clinic Module
+
+import unittest
+import os
+import json
+from unittest.mock import patch, MagicMock
+from clinic import CodeClinic
+
+class TestCodeClinic(unittest.TestCase):
+
+    def setUp(self):
+        """Set up test environment"""
+        # Create a test data file
+        self.test_data = {
+            'bookings': [],
+            'volunteer_slots': []
+        }
+        with open('test_data.json', 'w') as f:
+            json.dump(self.test_data, f)
+
+        # Patch the DATA_FILE constant
+        self.patcher = patch('clinic.DATA_FILE', 'test_data.json')
+        self.patcher.start()
+
+        # Create a clinic instance
+        self.clinic = CodeClinic()
+
+    def tearDown(self):
+        """Clean up after tests"""
+        # Stop the patcher
+        self.patcher.stop()
+
+        # Remove the test data file
+        if os.path.exists('test_data.json'):
+            os.remove('test_data.json')
+
+    def test_register_volunteer(self):
+        """Test registering a volunteer"""
+        volunteer = self.clinic.register_volunteer(
+            'Test Volunteer', 25, 'Male', 'S12345', 'test@example.com'
+        )
+        self.assertEqual(volunteer.name, 'Test Volunteer')
+        self.assertEqual(volunteer.email, 'test@example.com')
+        self.assertIn('test@example.com', self.clinic.volunteers)
+
+    @patch('clinic.create_event')
+    def test_add_volunteer_slot(self, mock_create_event):
+        """Test adding a volunteer slot"""
+        # Mock the create_event function to return a fake event ID
+        mock_create_event.return_value = 'event123'
+
+        # Register a volunteer
+        self.clinic.register_volunteer(
+            'Test Volunteer', 25, 'Male', 'S12345', 'test@example.com'
+        )
+
+        # Add a slot
+        result = self.clinic.add_volunteer_slot(
+            'test@example.com', '2023-06-01', '14:00', 30
+        )
+
+        # Check the result
+        self.assertTrue(result)
+        self.assertEqual(len(self.clinic.volunteer_slots), 1)
+        self.assertEqual(self.clinic.volunteer_slots[0]['date'], '2023-06-01')
+        self.assertEqual(self.clinic.volunteer_slots[0]['time'], '14:00')
+        self.assertEqual(self.clinic.volunteer_slots[0]['duration'], 30)
+        self.assertEqual(self.clinic.volunteer_slots[0]['volunteer_email'], 'test@example.com')
+        self.assertEqual(self.clinic.volunteer_slots[0]['event_id'], 'event123')
+        self.assertFalse(self.clinic.volunteer_slots[0]['booked'])
+
+    def test_book_slot(self):
+        """Test booking a slot"""
+        # Register a volunteer and add a slot
+        self.clinic.register_volunteer(
+            'Test Volunteer', 25, 'Male', 'S12345', 'test@example.com'
+        )
+
+        # Mock the create_event function
+        with patch('clinic.create_event', return_value='event123'):
+            self.clinic.add_volunteer_slot(
+                'test@example.com', '2023-06-01', '14:00', 30
+            )
+
+        # Book the slot
+        result = self.clinic.book_slot(
+            'student@example.com', 0, 'Help with Python'
+        )
+
+        # Check the result
+        self.assertTrue(result)
+        self.assertEqual(len(self.clinic.bookings), 1)
+        self.assertEqual(self.clinic.bookings[0]['date'], '2023-06-01')
+        self.assertEqual(self.clinic.bookings[0]['time'], '14:00')
+        self.assertEqual(self.clinic.bookings[0]['student_email'], 'student@example.com')
+        self.assertEqual(self.clinic.bookings[0]['description'], 'Help with Python')
+        self.assertTrue(self.clinic.volunteer_slots[0]['booked'])
+
+    def test_get_available_slots(self):
+        """Test getting available slots"""
+        # Register a volunteer and add slots
+        self.clinic.register_volunteer(
+            'Test Volunteer', 25, 'Male', 'S12345', 'test@example.com'
+        )
+
+        # Mock the create_event function
+        with patch('clinic.create_event', return_value='event123'):
+            self.clinic.add_volunteer_slot(
+                'test@example.com', '2023-06-01', '14:00', 30
+            )
+            self.clinic.add_volunteer_slot(
+                'test@example.com', '2023-06-02', '15:00', 45
+            )
+
+        # Book one slot
+        self.clinic.book_slot('student@example.com', 0, 'Help with Python')
+
+        # Get available slots
+        slots = self.clinic.get_available_slots()
+
+        # Check the result
+        self.assertEqual(len(slots), 1)
+        self.assertEqual(slots[0]['date'], '2023-06-02')
+        self.assertEqual(slots[0]['time'], '15:00')
+
+if __name__ == '__main__':
+    unittest.main()
+</code></pre>
+                                <div class="code-explanation">
+                                    <h4>Explanation:</h4>
+                                    <p>The <code>test_clinic.py</code> file contains unit tests for the CodeClinic class, ensuring that the core functionality works correctly.</p>
+                                    <p><strong>Key Concepts:</strong></p>
+                                    <ul>
+                                        <li><strong>Unit Testing:</strong> Using the unittest framework to test individual components</li>
+                                        <li><strong>Test Fixtures:</strong> Setting up and tearing down test environments</li>
+                                        <li><strong>Mocking:</strong> Using mock objects to simulate external dependencies</li>
+                                        <li><strong>Test Cases:</strong> Testing different aspects of the system's functionality</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Actors</h2>
+            <div class="actors">
+                <div class="actor-card">
+                    <h3>Student</h3>
+                    <p><strong>Role:</strong> Books sessions with volunteers to get help with coding problems.</p>
+                    <p><strong>Actions:</strong></p>
+                    <ul>
+                        <li>View available volunteer slots</li>
+                        <li>Book a session</li>
+                        <li>Cancel a booking</li>
+                        <li>Attend the session</li>
+                    </ul>
+                </div>
+
+                <div class="actor-card">
+                    <h3>Volunteer</h3>
+                    <p><strong>Role:</strong> Offers time to help other students with coding problems.</p>
+                    <p><strong>Actions:</strong></p>
+                    <ul>
+                        <li>Register as a volunteer</li>
+                        <li>Set available time slots</li>
+                        <li>Receive booking notifications</li>
+                        <li>Conduct sessions</li>
+                    </ul>
+                </div>
+
+                <div class="actor-card">
+                    <h3>System Administrator</h3>
+                    <p><strong>Role:</strong> Manages the Code Clinic system.</p>
+                    <p><strong>Actions:</strong></p>
+                    <ul>
+                        <li>Configure system settings</li>
+                        <li>Monitor system usage</li>
+                        <li>Resolve issues</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>System Flow</h2>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <h3>Volunteer Registration</h3>
+                    <p>Volunteers register in the system by providing their name, email, student number, and other details.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Setting Availability</h3>
+                    <p>Volunteers set their available time slots, which are then synchronized with Google Calendar.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Slot Visibility</h3>
+                    <p>Available slots become visible to students looking for help.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Booking Process</h3>
+                    <p>Students book a slot by providing their details and a description of their problem.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Calendar Integration</h3>
+                    <p>The booking is added to both the student's and volunteer's Google Calendars.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Notifications</h3>
+                    <p>Both parties receive notifications about the booking.</p>
+                </div>
+
+                <div class="flow-step">
+                    <h3>Session Completion</h3>
+                    <p>After the session, the slot is marked as completed in the system.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Key Entities</h2>
+            <div class="entities">
+                <div class="entity-card">
+                    <h3>Volunteer</h3>
+                    <p>Represents a student who offers their time to help others.</p>
+                    <p><strong>Properties:</strong></p>
+                    <ul>
+                        <li>Name</li>
+                        <li>Age</li>
+                        <li>Gender</li>
+                        <li>Student Number</li>
+                        <li>Email</li>
+                        <li>Availability (array of dates/times)</li>
+                    </ul>
+                </div>
+
+                <div class="entity-card">
+                    <h3>Booking</h3>
+                    <p>Represents a scheduled session between a student and a volunteer.</p>
+                    <p><strong>Properties:</strong></p>
+                    <ul>
+                        <li>Date</li>
+                        <li>Time</li>
+                        <li>Duration</li>
+                        <li>Student Email</li>
+                        <li>Description</li>
+                        <li>Google Calendar Event ID</li>
+                    </ul>
+                </div>
+
+                <div class="entity-card">
+                    <h3>Volunteer Slot</h3>
+                    <p>Represents a time slot offered by a volunteer.</p>
+                    <p><strong>Properties:</strong></p>
+                    <ul>
+                        <li>Date</li>
+                        <li>Time</li>
+                        <li>Duration</li>
+                        <li>Volunteer Email</li>
+                        <li>Google Calendar Event ID</li>
+                        <li>Booked Status</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+
+        // Function to render diagrams and handle loading states
+        function renderDiagrams() {
+            // Show all loading indicators
+            document.querySelectorAll('.loading').forEach(function(loader) {
+                loader.classList.add('active');
+            });
+
+            // Render diagrams
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+
+            // Hide loading indicators after rendering
+            setTimeout(function() {
+                document.querySelectorAll('.loading').forEach(function(loader) {
+                    loader.classList.remove('active');
+                });
+            }, 500);
+        }
+
+        // Tab functionality
+        function setupTabs() {
+            var tabs = document.querySelectorAll('.tab');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].onclick = function() {
+                    // Remove active class from all tabs
+                    for (var j = 0; j < tabs.length; j++) {
+                        tabs[j].classList.remove('active');
+                    }
+
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+
+                    // Hide all tab content
+                    var tabContents = document.querySelectorAll('.tab-content');
+                    for (var k = 0; k < tabContents.length; k++) {
+                        tabContents[k].classList.remove('active');
+                    }
+
+                    // Show the corresponding tab content
+                    var tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    // Re-render mermaid diagrams if needed
+                    if (tabId === 'system-diagram' || tabId === 'sequence-diagram' || tabId === 'entity-relationship') {
+                        renderDiagrams();
+                    }
+                };
+            }
+        }
+
+        // Folder toggle functionality
+        function setupFolders() {
+            var folders = document.querySelectorAll('.folder-name');
+            for (var i = 0; i < folders.length; i++) {
+                folders[i].onclick = function() {
+                    this.classList.toggle('open');
+
+                    // Toggle visibility of files in this folder
+                    var nextSibling = this.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = this.classList.contains('open') ? 'block' : 'none';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                };
+            }
+        }
+
+        // File click functionality
+        function setupFiles() {
+            var files = document.querySelectorAll('.file');
+            for (var i = 0; i < files.length; i++) {
+                files[i].onclick = function() {
+                    var fileId = this.getAttribute('data-file').replace('.', '-');
+                    var fileContent = document.getElementById(fileId);
+
+                    if (fileContent) {
+                        // Toggle the file content visibility
+                        fileContent.classList.toggle('active');
+                    }
+                };
+            }
+        }
+
+        // Initialize folder states
+        function initializeFolderStates() {
+            var folders = document.querySelectorAll('.folder-name');
+            for (var i = 0; i < folders.length; i++) {
+                var folder = folders[i];
+                if (folder.classList.contains('open')) {
+                    // Show files in open folders
+                    var nextSibling = folder.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = 'block';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                } else {
+                    // Hide files in closed folders
+                    var nextSibling = folder.nextElementSibling;
+                    while (nextSibling) {
+                        if (nextSibling.classList.contains('folder-name')) {
+                            break;
+                        }
+                        if (nextSibling.classList.contains('file') ||
+                            nextSibling.classList.contains('folder')) {
+                            nextSibling.style.display = 'none';
+                        }
+                        nextSibling = nextSibling.nextElementSibling;
+                    }
+                }
+            }
+        }
+
+        // Initialize everything when the page loads
+        window.onload = function() {
+            setupTabs();
+            setupFolders();
+            setupFiles();
+            initializeFolderStates();
+            renderDiagrams();
+        };
+    </script>
+</body>
+</html>
